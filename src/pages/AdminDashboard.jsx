@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   SlidersHorizontal,
   Calendar,
@@ -16,7 +16,8 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  LogOut,
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
@@ -25,6 +26,11 @@ import { useApp } from '../context/AppContext';
 
 export const AdminDashboard = () => {
   const {
+    user,
+    logout,
+    medicines,
+inventory,
+updateInventoryItem,
     appointments,
     updateAppointmentStatus,
     orders,
@@ -32,9 +38,82 @@ export const AdminDashboard = () => {
     prescriptions,
     updatePrescriptionStatus,
     doctors,
-    pharmacies,
-    resetDemoData
+pharmacies,
+addPharmacy,
+updatePharmacy,
+togglePharmacyStatus,
+resetDemoData,
   } = useApp();
+  const [pharmacyForm, setPharmacyForm] = useState({
+    name: '',
+    address: '',
+    city: '',
+    operatingHours: '',
+    deliveryAreas: '',
+    phone: '',
+    deliveryTime: '',
+});
+
+const [editingPharmacyId, setEditingPharmacyId] = useState(null);
+const handlePharmacySubmit = (e) => {
+    e.preventDefault();
+
+    const pharmacyData = {
+        ...pharmacyForm,
+        deliveryAreas: pharmacyForm.deliveryAreas
+            .split(',')
+            .map((area) => area.trim())
+            .filter(Boolean),
+    };
+
+    if (editingPharmacyId) {
+        updatePharmacy(editingPharmacyId, pharmacyData);
+    } else {
+        addPharmacy(pharmacyData);
+    }
+
+    setPharmacyForm({
+        name: '',
+        address: '',
+        city: '',
+        operatingHours: '',
+        deliveryAreas: '',
+        phone: '',
+        deliveryTime: '',
+    });
+
+    setEditingPharmacyId(null);
+};
+
+const handleEditPharmacy = (pharmacy) => {
+    setPharmacyForm({
+        name: pharmacy.name || '',
+        address: pharmacy.address || '',
+        city: pharmacy.city || '',
+        operatingHours: pharmacy.operatingHours || '',
+        deliveryAreas: Array.isArray(pharmacy.deliveryAreas)
+            ? pharmacy.deliveryAreas.join(', ')
+            : pharmacy.deliveryAreas || '',
+        phone: pharmacy.phone || '',
+        deliveryTime: pharmacy.deliveryTime || '',
+    });
+
+    setEditingPharmacyId(pharmacy.id);
+};
+
+  const navigate = useNavigate();
+
+  const handleAdminLogout = async () => {
+    try {
+      if (typeof logout === 'function') {
+        await logout();
+      }
+    } catch (err) {
+      console.error('Admin logout error:', err);
+    } finally {
+      navigate('/admin-login', { replace: true });
+    }
+  };
 
   const [activeTab, setActiveTab] = useState('prescriptions'); // 'prescriptions' | 'appointments' | 'orders' | 'doctors'
   const [searchFilter, setSearchFilter] = useState('');
@@ -130,7 +209,9 @@ export const AdminDashboard = () => {
           { id: 'prescriptions', label: 'Prescription Queue', count: prescriptions.length },
           { id: 'appointments', label: 'Manage Appointments', count: appointments.length },
           { id: 'orders', label: 'Manage Orders', count: orders.length },
-          { id: 'doctors', label: 'Doctor Directory', count: doctors.length }
+          { id: 'doctors', label: 'Doctor Directory', count: doctors.length },
+{ id: 'inventory', label: 'Pharmacy Inventory', count: inventory.length },
+{ id: 'pharmacies', label: 'Manage Pharmacies', count: pharmacies.length }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -381,6 +462,247 @@ export const AdminDashboard = () => {
           ))}
         </div>
       )}
+      {/* TAB 5: Pharmacy Inventory */}
+{activeTab === 'inventory' && (
+  <div className="bg-white rounded-2xl border border-slate-200 p-5">
+    <h3 className="text-lg font-bold text-slate-900 mb-2">
+      Pharmacy Inventory Management
+    </h3>
+    <p className="text-sm text-slate-500 mb-4">
+      Manage medicine prices and stock for each pharmacy.
+    </p>
+
+    {pharmacies.map((pharmacy) => {
+      const pharmacyItems = inventory.filter(
+        (item) => item.pharmacyId === pharmacy.id
+      );
+
+      return (
+        <div key={pharmacy.id} className="mb-6">
+          <h4 className="font-bold text-teal-700 mb-3">
+            {pharmacy.name}
+          </h4>
+
+          <div className="space-y-3">
+            {pharmacyItems.map((item) => {
+              const medicine = medicines.find(
+                (med) => med.id === item.medicineId
+              );
+
+              if (!medicine) return null;
+
+              return (
+                <div
+                  key={`${item.pharmacyId}-${item.medicineId}`}
+                  className="border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3"
+                >
+                  <div>
+                    <p className="font-semibold text-sm text-slate-900">
+                      {medicine.name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {medicine.packaging}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <label className="text-xs text-slate-600">
+                      Price (₹)
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.price}
+                        onChange={(e) =>
+                          updateInventoryItem(
+                            item.medicineId,
+                            item.pharmacyId,
+                            { price: Math.max(0, Number(e.target.value) || 0) }
+                          )
+                        }
+                        className="block w-20 mt-1 border rounded-lg p-2"
+                      />
+                    </label>
+
+                    <label className="text-xs text-slate-600">
+                      Stock
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.stock}
+                        onChange={(e) =>
+                          updateInventoryItem(
+                            item.medicineId,
+                            item.pharmacyId,
+                            { stock: Math.max(0, Number(e.target.value) || 0) }
+                          )
+                        }
+                        className="block w-20 mt-1 border rounded-lg p-2"
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
+{activeTab === 'pharmacies' && (
+    <div className="space-y-6">
+
+        {/* Add / Edit Pharmacy Form */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+                {editingPharmacyId ? 'Edit Pharmacy' : 'Add New Pharmacy'}
+            </h3>
+
+            <form onSubmit={handlePharmacySubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {[
+                    ['name', 'Pharmacy Name'],
+                    ['address', 'Address'],
+                    ['city', 'City'],
+                    ['operatingHours', 'Operating Hours'],
+                    ['deliveryAreas', 'Delivery Areas (comma separated)'],
+                    ['phone', 'Phone Number'],
+                    ['deliveryTime', 'Delivery Time'],
+                ].map(([field, label]) => (
+                    <label key={field} className="text-sm font-semibold text-slate-700">
+                        {label}
+                        <input
+                            required
+                            type="text"
+                            value={pharmacyForm[field]}
+                            onChange={(e) =>
+                                setPharmacyForm((current) => ({
+                                    ...current,
+                                    [field]: e.target.value,
+                                }))
+                            }
+                            className="block w-full mt-1 border border-slate-300 rounded-lg p-2.5"
+                        />
+                    </label>
+                ))}
+
+                <div className="md:col-span-2 flex gap-3">
+                    <button
+                        type="submit"
+                        className="bg-teal-700 text-white px-5 py-2.5 rounded-lg font-bold"
+                    >
+                        {editingPharmacyId ? 'Save Changes' : 'Add Pharmacy'}
+                    </button>
+
+                    {editingPharmacyId && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setEditingPharmacyId(null);
+                                setPharmacyForm({
+                                    name: '',
+                                    address: '',
+                                    city: '',
+                                    operatingHours: '',
+                                    deliveryAreas: '',
+                                    phone: '',
+                                    deliveryTime: '',
+                                });
+                            }}
+                            className="bg-slate-100 text-slate-700 px-5 py-2.5 rounded-lg font-bold"
+                        >
+                            Cancel
+                        </button>
+                    )}
+                </div>
+            </form>
+        </div>
+
+        {/* Pharmacy List */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+                Registered Pharmacies ({pharmacies.length})
+            </h3>
+
+            <div className="space-y-3">
+                {pharmacies.map((pharmacy) => (
+                    <div
+                        key={pharmacy.id}
+                        className="border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3"
+                    >
+                        <div>
+                            <h4 className="font-bold text-slate-900">
+                                {pharmacy.name}
+                            </h4>
+                            <p className="text-sm text-slate-500">
+                                {pharmacy.city} · {pharmacy.address}
+                            </p>
+                            <span className={`text-xs font-bold ${
+                                pharmacy.isActive === false
+                                    ? 'text-red-600'
+                                    : 'text-green-600'
+                            }`}>
+                                {pharmacy.isActive === false ? 'Inactive' : 'Active'}
+                            </span>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleEditPharmacy(pharmacy)}
+                                className="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-bold"
+                            >
+                                Edit
+                            </button>
+
+                            <button
+                                onClick={() => togglePharmacyStatus(pharmacy.id)}
+                                className={`px-3 py-2 rounded-lg text-sm font-bold ${
+                                    pharmacy.isActive === false
+                                        ? 'bg-green-50 text-green-700'
+                                        : 'bg-red-50 text-red-700'
+                                }`}
+                            >
+                                {pharmacy.isActive === false ? 'Activate' : 'Deactivate'}
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+)}
+
+      {/* Admin Session & Bottom Logout Button (Section 5 Requirement) */}
+      <div className="mt-8 pt-6 border-t border-slate-200">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md border border-slate-800">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+              <LogOut className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Administrator Session Active</h3>
+                <span className="text-[10px] bg-red-500/20 text-red-300 font-bold px-2 py-0.5 rounded-full border border-red-500/30">
+                  Elevated Role
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Logged in as <span className="text-slate-200 font-medium">{user?.email || 'admin@safemeds.demo'}</span>. Sign out to clear authentication state and secure the console.
+              </p>
+            </div>
+          </div>
+
+          <button
+            id="btn-admin-simulation-logout"
+            type="button"
+            onClick={handleAdminLogout}
+            className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>End Admin Session & Logout</span>
+          </button>
+        </div>
+      </div>
 
       {/* Reset Confirmation Modal */}
       <Modal

@@ -292,12 +292,12 @@ export const OrderDetails = () => {
                   <div>
                     <h4 className="font-bold text-slate-900">{item.name}</h4>
                     <span className="text-[11px] text-slate-500">
-                      Qty: {item.quantity} • {formatCurrency(item.indicativePrice)} each
+                     Qty: {item.quantity} • {formatCurrency(item.price ?? item.indicativePrice)} each
                     </span>
                   </div>
                 </div>
                 <span className="font-black text-slate-900">
-                  {formatCurrency(item.indicativePrice * item.quantity)}
+                 {formatCurrency((item.price ?? item.indicativePrice) * item.quantity)}
                 </span>
               </div>
             ))}
@@ -314,7 +314,7 @@ export const OrderDetails = () => {
             <span>Need Help with Order?</span>
           </Link>
 
-          {order.demoStatus !== 'Cancelled' && order.demoStatus !== 'Delivered in Demo' && (
+          {true && (
             <button
               type="button"
               onClick={() => setShowCancelModal(true)}

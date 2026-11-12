@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, Building2, MapPin, X, Clock, Truck } from 'lucide-react';
 import { PharmacyCard } from '../components/PharmacyCard';
 import { EmptyState } from '../components/EmptyState';
+import { LocationDiscoveryBar } from '../components/LocationDiscoveryBar';
 import { useApp } from '../context/AppContext';
 
 export const Pharmacies = () => {
@@ -18,6 +19,7 @@ export const Pharmacies = () => {
 
   const filteredPharmacies = useMemo(() => {
     return pharmacies.filter((p) => {
+      if (p.isActive === false) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = p.name.toLowerCase().includes(q);
@@ -74,6 +76,25 @@ export const Pharmacies = () => {
           </button>
         )}
       </div>
+
+      {/* GPS and Location-Based Discovery (Section 9 Requirement) */}
+      <LocationDiscoveryBar
+        currentCity={selectedCity}
+        onLocationResolved={(loc) => {
+          if (loc.matchedCity) {
+            // If the matched city is in our pharmacy cities list, select it
+            if (cities.includes(loc.matchedCity)) {
+              setSelectedCity(loc.matchedCity);
+            } else {
+              setSearchQuery(loc.matchedCity);
+            }
+          }
+        }}
+        onLocationCleared={() => {
+          setSelectedCity('All');
+          setSearchQuery('');
+        }}
+      />
 
       {/* Filter Bar */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">

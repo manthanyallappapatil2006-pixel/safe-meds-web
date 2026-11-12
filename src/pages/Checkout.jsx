@@ -37,6 +37,32 @@ export const Checkout = () => {
 
   const navigate = useNavigate();
 
+  // Pre-fill with default address if available
+  const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
+
+  const [addressMode, setAddressMode] = useState(defaultAddr ? 'saved' : 'new');
+  const [selectedAddressId, setSelectedAddressId] = useState(defaultAddr?.id || '');
+
+  const [newAddress, setNewAddress] = useState({
+    recipientName: user?.name || '',
+    phone: user?.phone || '',
+    house: '',
+    street: '',
+    city: 'Noida',
+    state: 'Uttar Pradesh',
+    pinCode: '201305',
+    deliveryInstructions: ''
+  });
+
+  const cartPharmacyId = cart[0]?.pharmacyId || '';
+
+const [selectedPharmacyId, setSelectedPharmacyId] = useState(
+    cartPharmacyId || pharmacies[0]?.id || 'PHARM-201'
+);
+  const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery (Demo)');
+  const [errors, setErrors] = useState({});
+  const [isPlacing, setIsPlacing] = useState(false);
+
   // If cart is empty, redirect
   if (cart.length === 0) {
     return (
@@ -56,28 +82,6 @@ export const Checkout = () => {
     );
   }
 
-  // Pre-fill with default address if available
-  const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
-
-  const [addressMode, setAddressMode] = useState(defaultAddr ? 'saved' : 'new');
-  const [selectedAddressId, setSelectedAddressId] = useState(defaultAddr?.id || '');
-
-  const [newAddress, setNewAddress] = useState({
-    recipientName: user?.name || '',
-    phone: user?.phone || '',
-    house: '',
-    street: '',
-    city: 'Noida',
-    state: 'Uttar Pradesh',
-    pinCode: '201305',
-    deliveryInstructions: ''
-  });
-
-  const [selectedPharmacyId, setSelectedPharmacyId] = useState(pharmacies[0]?.id || 'PHARM-201');
-  const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery (Demo)');
-  const [errors, setErrors] = useState({});
-  const [isPlacing, setIsPlacing] = useState(false);
-
   // Check if prescription is required and approved
   const approvedPrescription = prescriptions.find((p) => p.demoStatus === 'Approved in Demo');
   const isPrescriptionBlocked = hasPrescriptionItems && !approvedPrescription;
@@ -92,6 +96,47 @@ export const Checkout = () => {
     e.preventDefault();
     if (isPlacing) return;
 
+    // Ensure all cart items belong to the same pharmacy
+const cartPharmacyIds = [
+  ...new Set(cart.map((item) => item.pharmacyId).filter(Boolean))
+];
+
+if (cartPharmacyIds.length > 1) {
+  setErrors({
+    pharmacy: 'Your cart contains medicines from different pharmacies. Please place separate orders.'
+  });
+  return;
+}
+
+if (
+  cartPharmacyIds.length === 1 &&
+  selectedPharmacyId !== cartPharmacyIds[0]
+) {
+  setSelectedPharmacyId(cartPharmacyIds[0]);
+  setErrors({
+    pharmacy: 'The pharmacy has been updated to match your cart. Please review your order.'
+  });
+  return;
+}
+// Check whether the selected pharmacy is active
+const selectedPharmacy = pharmacies.find(
+  (pharmacy) => pharmacy.id === selectedPharmacyId
+);
+
+if (!selectedPharmacy || selectedPharmacy.isActive === false) {
+  setErrors({
+    pharmacy: 'This pharmacy is currently unavailable. Please remove these medicines and choose an active pharmacy.'
+  });
+  return;
+}
+
+
+if (!selectedPharmacy || selectedPharmacy.isActive === false) {
+  setErrors({
+    pharmacy: 'This pharmacy is currently unavailable. Please remove these medicines and choose an active pharmacy.'
+  });
+  return;
+}
     // Check prescription constraint
     if (isPrescriptionBlocked) {
       setErrors({
@@ -119,8 +164,7 @@ export const Checkout = () => {
 
     setIsPlacing(true);
 
-    const selectedPharmacy = pharmacies.find((p) => p.id === selectedPharmacyId);
-
+   
     setTimeout(() => {
       const order = placeOrder({
         items: [...cart],
@@ -203,9 +247,11 @@ export const Checkout = () => {
                 </div>
               )}
 
-              {errors.rx && (
-                <p className="text-xs text-red-600 font-bold mt-1">{errors.rx}</p>
-              )}
+              {errors.pharmacy && (
+  <p className="text-xs text-red-600 font-bold mt-1">
+    {errors.pharmacy}
+  </p>
+)}  
             </div>
           )}
 
@@ -218,7 +264,8 @@ export const Checkout = () => {
 
             <select
               value={selectedPharmacyId}
-              onChange={(e) => setSelectedPharmacyId(e.target.value)}
+              onChange={() => {}}
+              disabled
               className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-slate-50 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600"
             >
               {pharmacies.map((pharm) => (

@@ -1,85 +1,162 @@
+
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Home,
   UserCheck,
   Building2,
   Pill,
-  FileText,
   CalendarDays,
   ShoppingBag,
   ShieldAlert,
   User,
   SlidersHorizontal,
   HelpCircle,
-  FileCheck
+  FileCheck,
+  Bot,
+  Bell,
+  ClipboardList,
+  Users,
+  HeartPulse,
+  LogOut,
 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { getTranslation } from '../utils/translations';
 
 export const Sidebar = () => {
+  const { language, user, logout } = useApp();
+  const navigate = useNavigate();
+  const isAdmin = user?.role === 'admin';
+
+  const handleLogout = async () => {
+    try {
+      if (typeof logout === 'function') {
+        await logout();
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      navigate('/login', { replace: true });
+    }
+  };
+
+  const t = (key) => getTranslation(language, key);
+
   const navItems = [
-    { to: '/home', label: 'Home Dashboard', icon: Home },
-    { to: '/emergency', label: 'SOS Emergency (112)', icon: ShieldAlert, highlight: true },
-    { to: '/doctors', label: 'Find Doctors', icon: UserCheck },
-    { to: '/appointments', label: 'My Appointments', icon: CalendarDays },
-    { to: '/pharmacies', label: 'Local Pharmacies', icon: Building2 },
-    { to: '/medicines', label: 'Order Medicines', icon: Pill },
-    { to: '/prescriptions', label: 'Prescription Upload', icon: FileCheck },
-    { to: '/orders', label: 'My Orders', icon: ShoppingBag },
-    { to: '/profile', label: 'Patient Profile', icon: User },
-    { to: '/help', label: 'Help & Support', icon: HelpCircle },
-    { to: '/admin-demo', label: 'Admin Simulation', icon: SlidersHorizontal }
+    { to: '/home', labelKey: 'navHome', icon: Home },
+    { to: '/doctors', labelKey: 'navDoctors', icon: UserCheck },
+    { to: '/appointments', labelKey: 'navAppointments', icon: CalendarDays },
+    { to: '/pharmacies', labelKey: 'navPharmacies', icon: Building2 },
+    { to: '/medicines', labelKey: 'navMedicines', icon: Pill },
+    { to: '/prescriptions', labelKey: 'navPrescriptions', icon: FileCheck },
+    { to: '/orders', labelKey: 'navOrders', icon: ShoppingBag },
+    { to: '/reminders', labelKey: 'navReminders', icon: Bell },
+    { to: '/family', labelKey: 'navFamily', icon: Users },
+    { to: '/health-records', labelKey: 'navRecords', icon: ClipboardList },
+    { to: '/ai-assistant', labelKey: 'navAiAssistant', icon: Bot },
+    { to: '/profile', labelKey: 'navProfile', icon: User },
+    { to: '/help', labelKey: 'navHelp', icon: HelpCircle },
+    { to: '/admin-demo', labelKey: 'navAdmin', icon: SlidersHorizontal },
   ];
 
+  const fallbackLabels = {
+    navEmergency: 'SOS Emergency (112)',
+    navHome: 'Home Dashboard',
+  };
+
+  const getLabel = (key) => {
+    const translated = t(key);
+    if (translated === key) return fallbackLabels[key] || key;
+    return translated;
+  };
+
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-200 shrink-0 min-h-[calc(100vh-80px)] p-4">
-      <div className="space-y-1">
-        <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+    <aside className="flex flex-col w-16 sm:w-64 h-screen sticky top-0 bg-white border-r border-slate-200 shrink-0 p-2 sm:p-4 overflow-y-auto">
+
+      {/* Sidebar Brand */}
+      <div className="mb-6 pb-5 border-b border-slate-200">
+        <Link
+          to={user ? (isAdmin ? '/admin-demo' : '/home') : '/login'}
+          className="flex items-center gap-2 mb-5"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-700 to-teal-900 text-white flex items-center justify-center">
+            <HeartPulse className="w-6 h-6" />
+          </div>
+
+          <span className="hidden sm:block text-xl font-black text-slate-900">
+            Safe<span className="text-teal-700">Meds</span>
+          </span>
+        </Link>
+
+        {/* SOS Button */}
+        {!isAdmin && (
+          <Link
+            to="/emergency"
+            className="flex items-center justify-center gap-2 w-full px-3 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-colors"
+          >
+            <ShieldAlert className="w-5 h-5 shrink-0" />
+            <span className="hidden sm:inline">SOS Emergency</span>
+          </Link>
+        )}
+      </div>
+
+      {/* Navigation Links */}
+      <div className="space-y-0.5">
+        <p className="hidden sm:block px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
           Navigation
         </p>
+
         {navItems.map((item) => {
           const Icon = item.icon;
+
           return (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                  item.highlight
-                    ? isActive
-                      ? 'bg-red-600 text-white shadow-sm shadow-red-500/20'
-                      : 'text-red-700 bg-red-50 hover:bg-red-100/80 font-bold'
-                    : isActive
+                  isActive
                     ? 'bg-teal-50 text-teal-800 font-bold shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`
               }
             >
-              <Icon
-                className={`w-4 h-4 shrink-0 ${
-                  item.highlight ? 'text-current' : 'text-slate-500'
-                }`}
-              />
-              <span>{item.label}</span>
-              {item.highlight && (
-                <span className="ml-auto text-[9px] bg-red-600/20 text-red-700 font-extrabold px-1.5 py-0.5 rounded-full uppercase">
-                  SOS
-                </span>
-              )}
+              <Icon className="w-4 h-4 shrink-0 text-slate-400" />
+              <span className="hidden sm:inline truncate">
+                {getLabel(item.labelKey)}
+              </span>
             </NavLink>
           );
         })}
       </div>
 
-      <div className="mt-auto pt-6 border-t border-slate-100">
+      {/* Bottom Section */}
+      <div className="mt-auto pt-4 border-t border-slate-100 space-y-3">
+
+        {user && (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full px-3 py-3 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 font-semibold text-sm"
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        )}
+
         <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl border border-teal-100">
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="w-2 h-2 rounded-full bg-teal-600 animate-ping"></span>
-            <span className="text-[11px] font-bold text-teal-900">Prototype Active</span>
+            <span className="w-2 h-2 rounded-full bg-teal-600 animate-ping" />
+            <span className="text-[11px] font-bold text-teal-900">
+              Prototype Active
+            </span>
           </div>
+
           <p className="text-[10px] text-teal-700 leading-tight">
-            Safe Meds combines emergency response, doctors, and pharmacy access in one system.
+            Safe Meds combines emergency response, specialist doctors, AI health assistant, and pharmacy access in one unified system.
           </p>
         </div>
+
       </div>
     </aside>
   );

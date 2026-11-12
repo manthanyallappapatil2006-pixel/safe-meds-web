@@ -66,7 +66,7 @@ export const Register = () => {
 
         if (error) {
           if (error.message?.toLowerCase().includes('already registered') ||
-              error.message?.toLowerCase().includes('user already exists')) {
+            error.message?.toLowerCase().includes('user already exists')) {
             setAuthError('An account with this email already exists. Please sign in instead.');
           } else if (error.message?.toLowerCase().includes('password')) {
             setAuthError(error.message);

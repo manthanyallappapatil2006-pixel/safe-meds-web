@@ -61,6 +61,36 @@ export const OrderConfirmation = () => {
             <StatusBadge status={order.demoStatus} />
           </div>
 
+          <div className="pt-3 border-t border-slate-200">
+  <h3 className="text-xs font-bold text-slate-900 mb-2">
+    Ordered Medicines
+  </h3>
+
+  <div className="space-y-2">
+    {(order.items || []).map((item, index) => (
+      <div
+        key={`${item.id}-${item.pharmacyId || ''}-${index}`}
+        className="flex justify-between gap-3 text-xs"
+      >
+        <div>
+          <p className="font-semibold text-slate-800">
+            {item.name}
+          </p>
+          <p className="text-slate-500">
+            Quantity: {item.quantity}
+          </p>
+        </div>
+
+        <p className="font-bold text-slate-900">
+          {formatCurrency(
+            (item.price ?? item.indicativePrice) * item.quantity
+          )}
+        </p>
+      </div>
+    ))}
+  </div>
+</div>
+
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-slate-500">Pharmacy:</span>

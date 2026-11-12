@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Video, UserCheck, Calendar, Clock, Award, ShieldCheck, Languages } from 'lucide-react';
+import { Star, MapPin, Video, UserCheck, Calendar, Clock, Award, ShieldCheck, Languages, Phone } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { formatCurrency } from '../utils/formatting';
 
 export const DoctorCard = ({ doctor }) => {
+  const verifiedPhone = doctor.phone || doctor.clinicPhone;
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
       <div>
@@ -99,20 +101,36 @@ export const DoctorCard = ({ doctor }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-        <Link
-          to={`/doctors/${doctor.id}`}
-          className="w-full text-center py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-        >
-          View Profile
-        </Link>
+      {/* Action Buttons: Red Call Button (Section 12) + Book Appointment + View Profile */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-3 border-t border-slate-100">
+        {verifiedPhone && (
+          <a
+            href={`tel:${verifiedPhone.replace(/\s+/g, '')}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors shadow-xs"
+            title={`Call clinic for ${doctor.name}`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>Call Clinic</span>
+          </a>
+        )}
+
         <Link
           to={`/appointments/book/${doctor.id}`}
-          className="w-full text-center py-2 px-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-xs transition-colors"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-xs transition-colors"
         >
-          Book Slot
+          <Calendar className="w-3.5 h-3.5" />
+          <span>Book Appointment</span>
+        </Link>
+
+        <Link
+          to={`/doctors/${doctor.id}`}
+          className="sm:w-auto text-center py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+        >
+          Profile
         </Link>
       </div>
     </div>
   );
 };
+
+export default DoctorCard;

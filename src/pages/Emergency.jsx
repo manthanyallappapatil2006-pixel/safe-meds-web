@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from 'react-leaflet';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
@@ -21,15 +23,75 @@ import { StatusBadge } from '../components/StatusBadge';
 import { validateEmergencyForm } from '../utils/validation';
 import { useApp } from '../context/AppContext';
 
+
+
+function UpdateMapCenter({ position }) {
+  const map = useMap();
+  const previousPositionRef = useRef(null);
+
+  useEffect(() => {
+    if (!position) return;
+
+    const previousPosition = previousPositionRef.current;
+
+    // Move the map only when GPS coordinates actually change.
+    if (
+      !previousPosition ||
+      previousPosition[0] !== position[0] ||
+      previousPosition[1] !== position[1]
+    ) {
+      map.panTo(position, {
+        animate: true,
+        duration: 1
+      });
+
+      previousPositionRef.current = [...position];
+    }
+  }, [position, map]);
+
+  return null;
+}
+
+function CurrentLocationButton({ position }) {
+  const map = useMap();
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (position) {
+          map.flyTo(position, 17, {
+            animate: true,
+            duration: 1
+          });
+        }
+      }}
+      className="absolute top-3 right-3 z-[1000] bg-white text-teal-800 px-3 py-2 rounded-xl shadow-lg border border-teal-200 flex items-center gap-2 text-xs font-bold hover:bg-teal-50"
+    >
+      <MapPin className="w-4 h-4" />
+      Current Location
+    </button>
+  );
+}
+
 export const Emergency = () => {
-  const { emergencyContacts, createEmergencyRequest, emergencyHistory, cancelEmergencyRequest, advanceEmergencyStatus } =
-    useApp();
+  const {
+    emergencyContacts,
+    createEmergencyRequest,
+    updateEmergencyRequestLocation,
+    emergencyHistory,
+    cancelEmergencyRequest,
+    advanceEmergencyStatus
+  } = useApp();
   const navigate = useNavigate();
 
   // Active simulated request state
   const activeRequest = emergencyHistory.find(
     (req) => req.status === 'Demo Request Created' || req.status === 'Awaiting Demo Confirmation'
   );
+  console.log('ACTIVE REQUEST:', activeRequest);
+  
+console.log('EMERGENCY HISTORY:', emergencyHistory);
 
   const [formData, setFormData] = useState({
     category: 'General emergency',
@@ -39,11 +101,57 @@ export const Emergency = () => {
   });
 
   const [errors, setErrors] = useState({});
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [targetCancelId, setTargetCancelId] = useState(null);
-  const [gpsSimulated, setGpsSimulated] = useState(true);
+  const [gpsSimulated, setGpsSimulated] = useState(false);
 
+const watchIdRef = useRef(null);
+const [showConfirmModal, setShowConfirmModal] = useState(false);
+const [showCancelModal, setShowCancelModal] = useState(false);
+const [targetCancelId, setTargetCancelId] = useState(null);
+
+   
+const gpsLocation =
+  formData.location?.includes('GPS Location:')
+    ? formData.location
+    : activeRequest?.location;
+
+const gpsMatch = gpsLocation?.match(
+  /GPS Location:\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/
+);
+
+const patientPosition = gpsMatch
+  ? [Number(gpsMatch[1]), Number(gpsMatch[2])]
+  : null;
+  
+  console.log('Patient position on map:', patientPosition);
+  // Demo ambulance location (simulated)
+const [ambulancePosition, setAmbulancePosition] = useState(null);
+
+useEffect(() => {
+  if (!patientPosition) {
+    setAmbulancePosition(null);
+    return;
+  }
+
+  const target = patientPosition;
+
+  setAmbulancePosition([
+    target[0] + 0.003,
+    target[1] + 0.003
+  ]);
+
+  const interval = setInterval(() => {
+    setAmbulancePosition((current) => {
+      if (!current) return target;
+
+      return [
+        current[0] + (target[0] - current[0]) * 0.15,
+        current[1] + (target[1] - current[1]) * 0.15
+      ];
+    });
+  }, 500);
+
+  return () => clearInterval(interval);
+}, [patientPosition?.[0], patientPosition?.[1]]);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -51,14 +159,79 @@ export const Emergency = () => {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
   };
+  const ambulanceArrived =
+  patientPosition &&
+  ambulancePosition &&
+  Math.abs(patientPosition[0] - ambulancePosition[0]) < 0.0001 &&
+  Math.abs(patientPosition[1] - ambulancePosition[1]) < 0.0001;
 
-  const handleSimulateGPS = () => {
-    setGpsSimulated(true);
-    setFormData((prev) => ({
-      ...prev,
-      location: 'Plot 24, Block C, Knowledge Park III, Greater Noida (Live Demo GPS)'
-    }));
-  };
+
+ 
+
+const handleSimulateGPS = () => {
+  if (!navigator.geolocation) {
+    alert('GPS is not supported by this browser.');
+    return;
+  }
+
+  // Prevent multiple GPS tracking sessions.
+  if (watchIdRef.current !== null) {
+    navigator.geolocation.clearWatch(watchIdRef.current);
+    watchIdRef.current = null;
+  }
+
+  setGpsSimulated(true);
+
+  watchIdRef.current = navigator.geolocation.watchPosition(
+    (position) => {
+      const latitude = position.coords.latitude;
+      console.log('LIVE GPS RECEIVED:', latitude, position.coords.longitude);
+      const longitude = position.coords.longitude;
+
+      const updatedLocation = `GPS Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+setFormData((prev) => ({
+  ...prev,
+  location: updatedLocation
+}));
+
+if (activeRequest) {
+  updateEmergencyRequestLocation(
+    activeRequest.id,
+    updatedLocation
+  );
+}
+
+   
+    },
+    (error) => {
+      let message = 'Unable to update your location.';
+
+      if (error.code === error.PERMISSION_DENIED) {
+        message = 'Location permission denied. Please allow location access in your browser.';
+
+        if (watchIdRef.current !== null) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+          watchIdRef.current = null;
+        }
+        setGpsSimulated(false);
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        message = 'Your current location is unavailable.';
+      } else if (error.code === error.TIMEOUT) {
+        message = 'Location request timed out. Waiting for another GPS update.';
+      }
+
+      alert(message);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 1000
+    }
+  );
+};
+
+
 
   const handleInitiateRequest = (e) => {
     e.preventDefault();
@@ -123,6 +296,8 @@ export const Emergency = () => {
         </div>
       </div>
 
+  
+
       {/* Active Simulation Status Tracker (if there's an ongoing demo request) */}
       {activeRequest && (
         <div className="bg-white rounded-3xl border-2 border-red-200 p-6 shadow-md relative overflow-hidden">
@@ -184,6 +359,50 @@ export const Emergency = () => {
             </div>
           </div>
 
+          
+          {/* Emergency Contact Status */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-5 space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">
+              Emergency Contact Status
+            </h3>
+
+            {activeRequest.emergencyContacts?.length > 0 ? (
+              activeRequest.emergencyContacts.map((contact) => (
+                <div
+                  key={contact.id}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      {contact.name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {contact.relationship}
+                    </p>
+                  </div>
+
+                  <span className="text-sm font-semibold text-green-700">
+                    Saved
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">
+                No emergency contacts saved for this request.
+              </p>
+            )}
+
+            <div className="border-t border-gray-200 pt-3 flex items-center justify-between">
+              <span className="font-medium text-gray-700">
+                SMS Delivery
+              </span>
+              <span className="text-sm font-semibold text-orange-600">
+                Not Connected
+              </span>
+            </div>
+          </div>
+
+
           {/* Simulated Vehicle & Location Card */}
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -211,23 +430,108 @@ export const Emergency = () => {
               </span>
               <p className="text-xs font-bold text-slate-900 mt-1.5 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                <span className="truncate">{activeRequest.location}</span>
+                <span className="truncate">{gpsLocation || activeRequest.location}</span>
               </p>
               <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
                 Simulated Arrival: {activeRequest.eta}
               </p>
+              {ambulanceArrived && (
+  <p className="text-sm font-bold text-green-700 mt-2">
+    🟢 Demo Ambulance Arrived at Patient Location
+  </p>
+)}
+              <p className="text-[10px] text-amber-700 font-medium mt-1">
+  Demo ETA only — no real ambulance has been dispatched.
+</p>
             </div>
           </div>
 
-          {/* Illustrative Map Placeholder */}
-          <div className="bg-teal-950/90 text-teal-200 rounded-2xl p-4 mb-5 text-center relative overflow-hidden flex flex-col items-center justify-center min-h-[140px] border border-teal-800">
-            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#14b8a6_1px,transparent_1px)] [background-size:16px_16px]" />
-            <Navigation className="w-8 h-8 text-teal-400 mb-2 animate-bounce" />
-            <p className="text-xs font-bold text-white">Illustrative Simulation Map</p>
-            <p className="text-[11px] text-teal-300 max-w-sm">
-              Demonstration GPS coordinates pinned at {activeRequest.location}
-            </p>
-          </div>
+          
+
+{/* Interactive Patient GPS Map */}
+<div className="rounded-2xl overflow-hidden mb-5 border border-teal-800">
+  {patientPosition ? (
+    <>
+      <MapContainer
+        center={patientPosition}
+        zoom={15}
+        scrollWheelZoom={true}
+        style={{ height: '280px', width: '100%' }}
+      >
+        <UpdateMapCenter position={patientPosition} />
+        <CurrentLocationButton position={patientPosition} />
+
+       
+{/* Satellite imagery */}
+<TileLayer
+  attribution='Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
+  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+  maxZoom={19}
+/>
+
+{/* Road names and place labels */}
+<TileLayer
+  attribution="Labels &copy; Esri"
+  url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+  maxZoom={19}
+/>
+
+
+        <CircleMarker
+          center={patientPosition}
+          radius={10}
+          pathOptions={{
+            color: '#0f766e',
+            fillColor: '#14b8a6',
+            fillOpacity: 1
+          }}
+        >
+          <Popup>Your current GPS location</Popup>
+        </CircleMarker>
+
+        {patientPosition && ambulancePosition && (
+  <Polyline
+    positions={[patientPosition, ambulancePosition]}
+    pathOptions={{
+      color: '#0d9488',
+      weight: 4,
+      opacity: 0.8,
+      dashArray: '8, 8'
+    }}
+  />
+)}
+
+        {ambulancePosition && (
+          <CircleMarker
+            center={ambulancePosition}
+            radius={9}
+            pathOptions={{
+              color: '#b91c1c',
+              fillColor: '#ef4444',
+              fillOpacity: 1
+            }}
+          >
+            <Popup>Demo Ambulance (Simulated)</Popup>
+          </CircleMarker>
+        )}
+      </MapContainer>
+
+      <div className="flex flex-wrap gap-4 bg-teal-950 p-3 text-xs text-white">
+        <span>🟢 Patient Location</span>
+        <span>🔴 Demo Ambulance (Simulated)</span>
+      </div>
+    </>
+  ) : (
+    <div className="bg-teal-950/90 text-teal-200 p-6 text-center min-h-[140px] flex flex-col items-center justify-center">
+      <MapPin className="w-8 h-8 mb-2" />
+      <p className="font-semibold">Waiting for GPS Location</p>
+      <p className="text-xs mt-1">
+        Start Live GPS Tracking to display your location.
+      </p>
+    </div>
+  )}
+</div>
+
 
           {/* Teacher / Student Action Controls for Simulation */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
@@ -329,8 +633,37 @@ export const Emergency = () => {
                 className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 hover:text-teal-900 cursor-pointer"
               >
                 <Compass className="w-3 h-3" />
-                <span>Simulate GPS Fix</span>
+                <span>Start Live GPS Tracking</span>
               </button>
+              <div className="mt-2">
+  {gpsSimulated ? (
+    <p className="text-xs font-semibold text-green-600">
+      🟢 Live GPS Tracking Active
+    </p>
+  ) : (
+    <p className="text-xs font-semibold text-gray-500">
+      ⚪ GPS Tracking Stopped
+    </p>
+  )}
+</div>
+<button
+  type="button"
+  onClick={() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      setGpsSimulated(false);
+      console.log('GPS tracking stopped');
+      alert('Live GPS tracking stopped.');
+    } else {
+      setGpsSimulated(false);
+      alert('Live GPS tracking is not currently active.');
+    }
+  }}
+  className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 cursor-pointer"
+>
+  <span>Stop Live Tracking</span>
+</button>
             </div>
             <div className="relative">
               <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />

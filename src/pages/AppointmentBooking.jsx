@@ -84,7 +84,17 @@ export const AppointmentBooking = () => {
     setIsSubmitting(true);
 
     setTimeout(() => {
-      const booked = bookAppointment(formData);
+      const booked = bookAppointment({
+        ...formData,
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+        doctor,
+        specialty: doctor.specialty,
+        clinicName: doctor.hospitalName || doctor.clinicName,
+        hospitalAddress: doctor.clinicAddress,
+        fee: doctor.consultationFee,
+        consultationType: formData.appointmentType,
+      });
       setIsSubmitting(false);
       navigate('/appointments/confirmation', { state: { appointment: booked } });
     }, 600);

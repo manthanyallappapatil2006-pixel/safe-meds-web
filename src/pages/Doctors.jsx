@@ -5,15 +5,22 @@ import { DoctorCard } from '../components/DoctorCard';
 import { EmptyState } from '../components/EmptyState';
 import { specialtiesList, indianCitiesList, languagesList } from '../data/doctors';
 import { useApp } from '../context/AppContext';
+import { LocationAutocomplete } from '../components/LocationAutocomplete';
 
 export const Doctors = () => {
   const { doctors } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
-  const initialCity = searchParams.get('city') || 'All Cities';
-
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [selectedCity, setSelectedCity] = useState(initialCity);
+  const initialCity = searchParams.get('city') || 'All Cities';
+const [selectedCity, setSelectedCity] = useState(initialCity);
+  
+  // Selected address from nationwide location search
+const [selectedLocation, setSelectedLocation] = useState(null);
+
+// Nearby doctors or doctors across India
+const [searchMode, setSearchMode] = useState('nearby');
+
   const [selectedSpecialty, setSelectedSpecialty] = useState('All Specialties');
   const [selectedLanguage, setSelectedLanguage] = useState('All Languages');
   const [verificationFilter, setVerificationFilter] = useState('All');
@@ -22,23 +29,113 @@ export const Doctors = () => {
   const [sortBy, setSortBy] = useState('rating'); // 'rating' | 'fee-asc' | 'fee-desc' | 'name'
 
   const filteredDoctors = useMemo(() => {
+    console.log('Search mode:', searchMode);
+console.log('Selected location:', selectedLocation);
+console.log('Selected city:', selectedCity);
+console.log('Selected specialty:', selectedSpecialty);
+const locationMatches = (doctor) => {
+  // Show all available doctors in All India mode.
+  if (!selectedLocation || searchMode === 'india') {
+    return true;
+  }
+
+  // Convert values into lowercase text for easier comparison.
+  const normalize = (value) =>
+    String(value || '').trim().toLowerCase();
+
+  // Collect all available doctor location details.
+  const doctorLocation = [
+    doctor.city,
+    doctor.state,
+    doctor.district,
+    doctor.village,
+    doctor.area,
+    doctor.locality,
+    doctor.location,
+    doctor.clinicAddress,
+    doctor.hospitalName,
+    doctor.address,
+    doctor.pincode,
+    doctor.postalCode
+  ]
+    .filter(Boolean)
+    .map(normalize)
+    .join(' ');
+
+  // 1. Check exact PIN-code match.
+  if (selectedLocation.postcode) {
+    const selectedPin = normalize(selectedLocation.postcode);
+
+    const doctorPins = [
+      doctor.pincode,
+      doctor.postalCode,
+      doctor.postal_code
+    ].map(normalize);
+
+    if (doctorPins.includes(selectedPin)) {
+      return true;
+    }
+  }
+
+  // 2. Check area, village, city and district.
+  const locationNames = [
+    selectedLocation.name,
+    selectedLocation.city,
+    selectedLocation.district
+  ]
+    .filter(Boolean)
+    .map(normalize);
+
+  const placeMatch = locationNames.some(name =>
+    doctorLocation.includes(name)
+  );
+
+  if (placeMatch) {
+    return true;
+  }
+
+  // 3. If no place matches, check the state.
+  const selectedState = normalize(selectedLocation.state);
+
+  if (selectedState && doctorLocation.includes(selectedState)) {
+    return true;
+  }
+
+  return false;
+};
     return doctors
       .filter((doctor) => {
         // Search query
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const matchName = doctor.name.toLowerCase().includes(q);
-          const matchSpec = doctor.specialty.toLowerCase().includes(q);
-          const matchAddress = (doctor.clinicAddress || '').toLowerCase().includes(q);
-          const matchHospital = (doctor.hospitalName || '').toLowerCase().includes(q);
-          const matchCity = (doctor.city || '').toLowerCase().includes(q);
-          if (!matchName && !matchSpec && !matchAddress && !matchHospital && !matchCity) return false;
-        }
 
-        // City filter
-        if (selectedCity !== 'All Cities' && doctor.city !== selectedCity) {
-          return false;
-        }
+// City filter with alias matching
+if (searchMode !== 'india' && selectedCity !== 'All Cities') {
+  const cityAliases = {
+    'Bengaluru (Bangalore)': ['Bengaluru', 'Bangalore'],
+    'Mysore': ['Mysore', 'Mysuru'],
+    'Mangaluru (Mangalore)': ['Mangaluru', 'Mangalore'],
+    'Gurugram (Gurgaon)': ['Gurugram', 'Gurgaon'],
+    'Thiruvananthapuram (Trivandrum)': ['Thiruvananthapuram', 'Trivandrum'],
+    'Kochi (Cochin)': ['Kochi', 'Cochin'],
+    'Kozhikode (Calicut)': ['Kozhikode', 'Calicut'],
+    'Prayagraj (Allahabad)': ['Prayagraj', 'Allahabad'],
+    'Aurangabad (Chhatrapati Sambhajinagar)': [
+      'Aurangabad',
+      'Chhatrapati Sambhajinagar'
+    ],
+    'Hubballi-Dharwad': ['Hubballi', 'Dharwad', 'Hubballi-Dharwad']
+  };
+
+  const selectedAliases = cityAliases[selectedCity] || [selectedCity];
+  const doctorCity = (doctor.city || '').toLowerCase();
+
+  const cityMatches = selectedAliases.some(city =>
+    doctorCity.includes(city.toLowerCase())
+  );
+
+  if (!cityMatches) {
+    return false;
+  }
+}
 
         // Specialty filter
         if (
@@ -65,19 +162,34 @@ export const Doctors = () => {
         }
 
         // Consultation type
-        if (consultationType === 'Online' && !doctor.consultationTypes.includes('Online consultation')) {
-          return false;
-        }
-        if (consultationType === 'In-person' && !doctor.consultationTypes.includes('In-person consultation')) {
-          return false;
-        }
+        if (
+  consultationType === 'Online' &&
+  !(doctor.consultationTypes || []).includes('Online consultation')
+) {
+  return false;
+}
 
+if (
+  consultationType === 'In-person' &&
+  !(doctor.consultationTypes || []).includes('In-person consultation')
+) {
+  return false;
+}
+console.log('Selected specialty:', selectedSpecialty);
+console.log('Doctor specialty:', doctor.specialty);
+console.log('Maximum fee:', maxFee);
+console.log('Doctor fee:', doctor.consultationFee);
         // Fee range
-        if (doctor.consultationFee > maxFee) {
-          return false;
-        }
+if (doctor.consultationFee > maxFee) {
+  return false;
+}
 
-        return true;
+// Location filter
+if (!locationMatches(doctor)) {
+  return false;
+}
+
+return true;
       })
       .sort((a, b) => {
         if (sortBy === 'fee-asc') return a.consultationFee - b.consultationFee;
@@ -89,6 +201,8 @@ export const Doctors = () => {
     doctors,
     searchQuery,
     selectedCity,
+    selectedLocation,
+    searchMode,
     selectedSpecialty,
     selectedLanguage,
     verificationFilter,
@@ -99,7 +213,9 @@ export const Doctors = () => {
 
   const handleClearFilters = () => {
     setSearchQuery('');
-    setSelectedCity('All Cities');
+   
+    setSelectedLocation(null);
+    setSearchMode('nearby');
     setSelectedSpecialty('All Specialties');
     setSelectedLanguage('All Languages');
     setVerificationFilter('All');
@@ -110,14 +226,16 @@ export const Doctors = () => {
   };
 
   const isFiltered =
-    searchQuery ||
-    selectedCity !== 'All Cities' ||
-    selectedSpecialty !== 'All Specialties' ||
-    selectedLanguage !== 'All Languages' ||
-    verificationFilter !== 'All' ||
-    consultationType !== 'All' ||
-    maxFee < 1500 ||
-    sortBy !== 'rating';
+  searchQuery ||
+  selectedLocation ||
+  searchMode !== 'nearby' ||
+
+  selectedSpecialty !== 'All Specialties' ||
+  selectedLanguage !== 'All Languages' ||
+  verificationFilter !== 'All' ||
+  consultationType !== 'All' ||
+  maxFee < 1500 ||
+  sortBy !== 'rating';
 
   return (
     <div className="space-y-6 pb-12">
@@ -148,23 +266,68 @@ export const Doctors = () => {
         )}
       </div>
 
-      {/* Indian City Quick Selector Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {indianCitiesList.map((city) => (
-          <button
-            key={city}
-            onClick={() => setSelectedCity(city)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${
-              selectedCity === city
-                ? 'bg-teal-700 text-white shadow-xs'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            {city !== 'All Cities' && <MapPin className="w-3 h-3" />}
-            <span>{city}</span>
-          </button>
-        ))}
-      </div>
+      
+
+      
+{/* Nationwide Location Search */}
+<div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+  <div>
+    <h2 className="text-sm font-bold text-slate-800">
+      Find Doctors by Location
+    </h2>
+    <p className="text-xs text-slate-500 mt-1">
+      Enter an address, locality, village, city, district, state or PIN code.
+    </p>
+  </div>
+
+  <LocationAutocomplete
+    onSelect={(place) => {
+      setSelectedLocation(place);
+  
+
+      if (place) {
+        setSearchMode('nearby');
+      }
+    }}
+  />
+
+  <div className="flex flex-wrap gap-2">
+    <button
+      type="button"
+      onClick={() => setSearchMode('nearby')}
+      className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+        searchMode === 'nearby'
+          ? 'bg-teal-700 text-white'
+          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+      }`}
+    >
+      <MapPin className="inline w-3.5 h-3.5 mr-1" />
+      Nearby Doctors
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+  setSearchMode('india');
+}}
+      className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+        searchMode === 'india'
+          ? 'bg-teal-700 text-white'
+          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+      }`}
+    >
+      <MapPin className="inline w-3.5 h-3.5 mr-1" />
+      Search All India
+    </button>
+  </div>
+
+  {selectedLocation && (
+    <p className="text-xs text-teal-700">
+      Selected location: {selectedLocation.label}
+    </p>
+  )}
+</div>
+
 
       {/* Filter & Search Toolbar */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">

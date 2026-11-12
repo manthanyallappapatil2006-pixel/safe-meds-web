@@ -133,26 +133,35 @@ export const Cart = () => {
                 <p className="text-[11px] text-slate-500 mb-1">
                   {item.packaging}
                 </p>
+                {item.pharmacyName && (
+  <p className="text-[11px] text-blue-700 font-semibold mb-1">
+    Pharmacy: {item.pharmacyName}
+  </p>
+)}
                 {item.requiresPrescription && (
                   <span className="inline-block text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.2 rounded mb-1">
                     Rx Required
                   </span>
                 )}
                 <div className="text-xs font-bold text-slate-700">
-                  Unit: {formatCurrency(item.indicativePrice)}
+                  Unit: {formatCurrency(item.price ?? item.indicativePrice)}
                 </div>
               </div>
 
               {/* Quantity Controls & Line Total */}
               <div className="flex flex-col items-end gap-2">
                 <div className="text-sm font-black text-slate-900">
-                  {formatCurrency(item.indicativePrice * item.quantity)}
+                  {formatCurrency((item.price ?? item.indicativePrice) * item.quantity)}
                 </div>
 
                 <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 p-0.5">
                   <button
                     type="button"
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    onClick={() => updateQuantity(
+  item.id,
+  item.pharmacyId,
+  item.quantity - 1
+)}
                     className="p-1 rounded hover:bg-white text-slate-600 cursor-pointer"
                     aria-label="Decrease quantity"
                   >
@@ -163,7 +172,11 @@ export const Cart = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() => updateQuantity(
+  item.id,
+  item.pharmacyId,
+  item.quantity + 1
+)}
                     className="p-1 rounded hover:bg-white text-slate-600 cursor-pointer"
                     aria-label="Increase quantity"
                   >
@@ -173,7 +186,7 @@ export const Cart = () => {
 
                 <button
                   type="button"
-                  onClick={() => removeFromCart(item.id)}
+                  onClick={() => removeFromCart(item.id, item.pharmacyId)}
                   className="text-[11px] text-red-600 hover:text-red-800 font-semibold cursor-pointer"
                 >
                   Remove

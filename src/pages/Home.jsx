@@ -28,7 +28,7 @@ import { formatCurrency, formatDate } from '../utils/formatting';
 import { useApp } from '../context/AppContext';
 
 export const Home = () => {
-  const { user, appointments, orders, doctors, pharmacies, emergencyContacts } = useApp();
+  const { user, appointments, orders, doctors, pharmacies, emergencyContacts, t } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -96,19 +96,19 @@ export const Home = () => {
         </div>
       </div>
 
-      {/* Primary 3 Service Cards */}
+      {/* Primary 4 Service Cards */}
       <section>
         <div className="flex items-center justify-between mb-3.5">
           <h2 className="text-base sm:text-lg font-black text-slate-900">
-            Core Healthcare Services
+            {t('navHome') || 'Core Healthcare Services'}
           </h2>
           <span className="text-xs text-slate-500 font-medium">All in One Place</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <ServiceCard
             icon={ShieldAlert}
-            title="SOS Emergency"
+            title={t('navEmergency') || 'SOS Emergency'}
             description="Immediate emergency assistance simulation, geolocation dispatch demo, and India helpline 112."
             buttonText="Get Emergency Help"
             to="/emergency"
@@ -117,7 +117,7 @@ export const Home = () => {
 
           <ServiceCard
             icon={UserCheck}
-            title="Find a Doctor"
+            title={t('navDoctors') || 'Find a Doctor'}
             description="Browse 8+ medical specialties, inspect doctor qualifications, and reserve clinic or virtual slots."
             buttonText="Explore Doctors"
             to="/doctors"
@@ -125,10 +125,19 @@ export const Home = () => {
           />
 
           <ServiceCard
+            icon={Building2}
+            title={t('navPharmacies') || 'Local Pharmacies'}
+            description="Locate nearby verified chemists, check operating hours, delivery coverage, and phone contacts."
+            buttonText="Find Pharmacies"
+            to="/pharmacies"
+            variant="teal"
+          />
+
+          <ServiceCard
             icon={Pill}
-            title="Order Medicines"
-            description="Shop verified OTC and prescription healthcare supplies from local neighborhood pharmacies."
-            buttonText="Browse Medicines"
+            title={t('navMedicines') || 'Medicines Info'}
+            description="Educational medicine guide, dosage forms, uses, and personal reference list."
+            buttonText="Browse Guide"
             to="/medicines"
             variant="teal"
           />

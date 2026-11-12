@@ -168,6 +168,48 @@ export const initialMedicines = [
   }
 ];
 
+
+// Pharmacy-specific inventory (sample data for development)
+export const pharmacyInventory = [
+  { medicineId: 'MED-301', pharmacyId: 'PHARM-201', price: 35, stock: 50 },
+  { medicineId: 'MED-301', pharmacyId: 'PHARM-202', price: 38, stock: 30 },
+  { medicineId: 'MED-301', pharmacyId: 'PHARM-203', price: 36, stock: 0 },
+
+  { medicineId: 'MED-302', pharmacyId: 'PHARM-201', price: 65, stock: 25 },
+  { medicineId: 'MED-302', pharmacyId: 'PHARM-202', price: 68, stock: 40 },
+
+  { medicineId: 'MED-303', pharmacyId: 'PHARM-201', price: 120, stock: 15 },
+  { medicineId: 'MED-303', pharmacyId: 'PHARM-203', price: 125, stock: 10 },
+
+  { medicineId: 'MED-304', pharmacyId: 'PHARM-201', price: 450, stock: 12 },
+  { medicineId: 'MED-304', pharmacyId: 'PHARM-202', price: 440, stock: 8 },
+
+  { medicineId: 'MED-305', pharmacyId: 'PHARM-202', price: 75, stock: 20 },
+  { medicineId: 'MED-305', pharmacyId: 'PHARM-204', price: 80, stock: 15 },
+
+  { medicineId: 'MED-306', pharmacyId: 'PHARM-201', price: 110, stock: 18 },
+  { medicineId: 'MED-306', pharmacyId: 'PHARM-205', price: 105, stock: 10 },
+
+  { medicineId: 'MED-307', pharmacyId: 'PHARM-202', price: 320, stock: 14 },
+  { medicineId: 'MED-307', pharmacyId: 'PHARM-204', price: 310, stock: 9 },
+
+  { medicineId: 'MED-308', pharmacyId: 'PHARM-201', price: 85, stock: 40 },
+  { medicineId: 'MED-308', pharmacyId: 'PHARM-203', price: 88, stock: 25 },
+
+  { medicineId: 'MED-309', pharmacyId: 'PHARM-202', price: 190, stock: 16 },
+  { medicineId: 'MED-309', pharmacyId: 'PHARM-204', price: 195, stock: 12 },
+
+  { medicineId: 'MED-310', pharmacyId: 'PHARM-201', price: 95, stock: 20 },
+  { medicineId: 'MED-310', pharmacyId: 'PHARM-203', price: 100, stock: 15 },
+
+  { medicineId: 'MED-311', pharmacyId: 'PHARM-204', price: 1450, stock: 5 },
+  { medicineId: 'MED-311', pharmacyId: 'PHARM-205', price: 1490, stock: 3 },
+
+  { medicineId: 'MED-312', pharmacyId: 'PHARM-201', price: 890, stock: 7 },
+  { medicineId: 'MED-312', pharmacyId: 'PHARM-205', price: 870, stock: 0 }
+];
+
+
 export const medicineCategories = [
   'All Categories',
   'Fever and Pain Relief',

@@ -17,7 +17,8 @@ import {
   Trash2,
   CheckCircle2,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Languages,
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { FormField } from '../components/FormField';
@@ -28,6 +29,8 @@ export const Profile = () => {
   const {
     user,
     logout,
+    language,
+    setLanguage,
     addresses,
     addAddress,
     updateAddress,
@@ -38,7 +41,7 @@ export const Profile = () => {
     deleteEmergencyContact,
     appointments,
     orders,
-    resetDemoData
+    resetDemoData,
   } = useApp();
 
   const navigate = useNavigate();
@@ -418,6 +421,38 @@ export const Profile = () => {
             />
           </label>
         </div>
+
+        {/* Language Preference (Section 6 & 14 Requirement) */}
+        <div className="pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-2">
+            <Languages className="w-4 h-4 text-teal-700" />
+            <span className="text-xs font-bold text-slate-800">Language Preference / भाषा प्राधान्य</span>
+          </div>
+          <p className="text-[11px] text-slate-500 mb-3">
+            Choose your preferred language for website navigation and interface labels:
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { code: 'en', label: 'English', sub: 'Default' },
+              { code: 'hi', label: 'हिंदी', sub: 'Hindi' },
+              { code: 'mr', label: 'मराठी', sub: 'Marathi' },
+            ].map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => setLanguage(item.code)}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center ${
+                  language === item.code
+                    ? 'border-teal-700 bg-teal-50 text-teal-800 shadow-xs'
+                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                }`}
+              >
+                <div>{item.label}</div>
+                <div className="text-[10px] font-normal text-slate-400">{item.sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Reset Demo Data & Logout Actions */}
@@ -443,11 +478,11 @@ export const Profile = () => {
 
           <button
             type="button"
-            onClick={() => {
-              logout();
-              navigate('/welcome');
+            onClick={async () => {
+              if (typeof logout === 'function') await logout();
+              navigate('/login', { replace: true });
             }}
-            className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
