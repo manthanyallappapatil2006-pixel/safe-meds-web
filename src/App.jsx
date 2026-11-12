@@ -99,7 +99,7 @@ const IndexRoute = () => {
 function App() {
   return (
     <AppProvider>
-      <BrowserRouter basename="/safe-meds-web">
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           {/* Root */}
           <Route path="/" element={<IndexRoute />} />
