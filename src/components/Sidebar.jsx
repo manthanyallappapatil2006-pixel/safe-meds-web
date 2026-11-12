@@ -27,6 +27,7 @@ export const Sidebar = () => {
   const { language, user, logout } = useApp();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
+  console.log('SIDEBAR USER:', user);
 
   const handleLogout = async () => {
     try {
@@ -144,18 +145,7 @@ export const Sidebar = () => {
           </button>
         )}
 
-        <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl border border-teal-100">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="w-2 h-2 rounded-full bg-teal-600 animate-ping" />
-            <span className="text-[11px] font-bold text-teal-900">
-              Prototype Active
-            </span>
-          </div>
-
-          <p className="text-[10px] text-teal-700 leading-tight">
-            Safe Meds combines emergency response, specialist doctors, AI health assistant, and pharmacy access in one unified system.
-          </p>
-        </div>
+        
 
       </div>
     </aside>

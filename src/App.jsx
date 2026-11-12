@@ -62,8 +62,14 @@ import { Presentation } from './pages/Presentation';
 
 // Shared application layout
 
+
 const AppLayout = () => {
-  const { toast } = useApp();
+  const { toast, user } = useApp();
+
+  // Redirect visitors to login if they are not authenticated
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="h-screen bg-slate-50 flex text-slate-900 antialiased overflow-hidden">
@@ -73,13 +79,13 @@ const AppLayout = () => {
         <Outlet />
       </main>
 
-      {/* Floating AI Assistant Widget */}
       <FloatingAiWidget />
 
       {toast && <Toast toast={toast} />}
     </div>
   );
 };
+
 // Root redirect — logged-in → /home, visitor → /login
 const IndexRoute = () => {
   const { user } = useApp();
@@ -93,7 +99,7 @@ const IndexRoute = () => {
 function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/safe-meds-web">
         <Routes>
           {/* Root */}
           <Route path="/" element={<IndexRoute />} />
